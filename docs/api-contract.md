@@ -146,6 +146,66 @@ Request:
 }
 ```
 
+## Discounts
+
+### `GET /api/discounts`
+
+Allowed roles: `admin`, `staff`.
+
+Response `200` returns up to 500 rules ordered by creation time:
+
+```json
+{
+  "data": [
+    {
+      "id": "00000000-0000-0000-0000-000000000050",
+      "code": "WELCOME10",
+      "description": "Ten percent off",
+      "discount_type": "percentage",
+      "value": "10.00",
+      "minimum_spend": "0.00",
+      "minimum_quantity": "0.000",
+      "product_id": null,
+      "valid_from": "2026-01-01",
+      "valid_until": "2026-12-31",
+      "max_redemptions": 100,
+      "redemption_count": 0,
+      "is_active": true
+    }
+  ],
+  "error": null,
+  "meta": { "count": 1 }
+}
+```
+
+### `POST /api/discounts`
+
+Allowed role: `admin`.
+
+Request:
+
+```json
+{
+  "code": "WELCOME10",
+  "description": "Ten percent off",
+  "discount_type": "percentage",
+  "value": "10.00",
+  "minimum_spend": "0.00",
+  "minimum_quantity": "0",
+  "product_id": null,
+  "valid_from": "2026-01-01",
+  "valid_until": "2026-12-31",
+  "max_redemptions": 100,
+  "is_active": true
+}
+```
+
+`discount_type` is `percentage` or `fixed_amount`. Percentage values cannot
+exceed `100.00`; monetary values are decimal strings. `minimum_spend` and
+`minimum_quantity` default to zero. During recurring billing, one eligible rule
+with the greatest monetary benefit is selected, discount is applied before tax,
+and `redemption_count` is incremented atomically with invoice creation.
+
 ## Customers
 
 ### `GET /api/customers`
