@@ -1,7 +1,7 @@
 import { connection } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth/server";
-import { dbCheck, endpoint, jsonBody, jsonOk, money, rate, uuid, dateOnly } from "@/lib/api/http";
+import { dbCheck, endpoint, jsonBody, jsonOk, money, uuid, dateOnly } from "@/lib/api/http";
 
 const ruleSchema = z.object({
   code: z.string().trim().min(1).max(80),
