@@ -8,7 +8,8 @@ const schema = z.object({
   company_name: optionalText,
   email: z.string().email().max(254).nullable().optional(),
   phone: optionalText,
-  billing_address: z.record(z.string(), z.unknown()).default({}),
+  // Accept frontend BillingAddress | null; normalize to non-null JSONB in DB.
+  billing_address: z.record(z.string(), z.unknown()).nullish().transform((value) => value ?? {}),
   is_active: z.boolean().default(true),
   auth_user_id: uuid.nullable().optional(),
 }).strict();

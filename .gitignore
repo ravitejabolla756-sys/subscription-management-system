@@ -12,6 +12,9 @@
 
 # testing
 /coverage
+*.zip
+/subflow-backend-integration/
+/subflow-e2e-tests/
 
 # next.js
 /.next/

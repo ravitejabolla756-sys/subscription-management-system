@@ -184,6 +184,10 @@ Request:
 The server validates that an optional `auth_user_id` exists and never changes a
 user's profile role as part of customer creation.
 
+`billing_address` may be `null` or omitted in the request. The API normalizes
+those values to `{}` before inserting the customer because the database column
+is non-null JSONB.
+
 ## Subscriptions
 
 ### `GET /api/subscriptions`
@@ -293,6 +297,33 @@ Postgres function/RPC or an equivalent transaction-safe server operation.
 
 ## Payments
 
+### `GET /api/payments`
+
+Allowed roles: `admin`, `staff`. Customers receive HTTP `403`.
+
+Optional query parameter: `invoice_id` (UUID). Results are ordered by
+`paid_at` descending and limited to the newest 500 records.
+
+Response `200`:
+
+```json
+{
+  "data": [
+    {
+      "id": "00000000-0000-0000-0000-000000000040",
+      "invoice_id": "00000000-0000-0000-0000-000000000030",
+      "amount": "40.00",
+      "payment_method": "upi",
+      "paid_at": "2026-01-31T10:30:00Z",
+      "reference": "UPI-DEMO-001",
+      "notes": "Partial settlement"
+    }
+  ],
+  "error": null,
+  "meta": { "count": 1 }
+}
+```
+
 ### `POST /api/payments`
 
 Allowed roles: `admin`, `staff`.
@@ -314,7 +345,32 @@ The server verifies the invoice exists, rejects void invoices and overpayments,
 and records `recorded_by` from the authenticated user. The database trigger
 updates `paid_amount`, `due_amount`, and invoice status atomically.
 
-Response `201` returns the created payment and the updated invoice summary.
+Response `201` returns the created payment directly in `data`. The updated
+invoice summary is returned in `meta.invoice`:
+
+```json
+{
+  "data": {
+    "id": "00000000-0000-0000-0000-000000000040",
+    "invoice_id": "00000000-0000-0000-0000-000000000030",
+    "amount": "40.00",
+    "payment_method": "upi",
+    "paid_at": "2026-01-31T10:30:00Z",
+    "reference": "UPI-DEMO-001",
+    "notes": "Partial settlement"
+  },
+  "error": null,
+  "meta": {
+    "invoice": {
+      "id": "00000000-0000-0000-0000-000000000030",
+      "status": "partially_paid",
+      "total_amount": "118.00",
+      "paid_amount": "40.00",
+      "due_amount": "78.00"
+    }
+  }
+}
+```
 
 ## Dashboard
 
