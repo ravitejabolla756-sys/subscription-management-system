@@ -141,3 +141,7 @@ export function findSubscription(id: string) {
 export function findQuotation(id: string) {
   return demoQuotations.find((quotation) => quotation.id === id);
 }
+
+export function findInvoice(id: string) {
+  return demoInvoices.find((invoice) => invoice.id === id);
+}

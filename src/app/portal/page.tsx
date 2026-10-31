@@ -14,7 +14,7 @@ export default function PortalDashboard() {
   const active = demoSubscriptions.filter((item) => item.status === "Active");
   const outstanding = demoInvoices.filter((item) => item.status !== "Paid").reduce((sum, invoice) => sum + invoice.amount, 0);
   return <>
-    <PageHeading eyebrow="Overview" title="Your subscription overview" description="Keep track of what you use, what you spend, and what’s coming up next." action={<button className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-blue-600/20 transition-colors hover:bg-blue-700"><Download size={15} /> Download statement</button>} />
+    <PageHeading eyebrow="Overview" title="Your subscription overview" description="Keep track of what you use, what you spend, and what’s coming up next." action={<button disabled className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-500" title="Statement downloads will be enabled with the invoice API"><Download size={15} /> Download statement</button>} />
     <DemoNotice />
     <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <StatCard label="Active subscriptions" value={String(active.length)} helper="1 plan paused" icon={WalletCards} tone="bg-blue-50 text-blue-600" />
