@@ -12,6 +12,9 @@
 
 # testing
 /coverage
+*.zip
+/subflow-backend-integration/
+/subflow-e2e-tests/
 
 # next.js
 /.next/
@@ -32,6 +35,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
