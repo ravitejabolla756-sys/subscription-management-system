@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "./phase2.css";
+import "./phase3.css";
 
 export const metadata: Metadata = { title: "Subflow — Subscription operations", description: "Admin dashboard for managing products, plans and subscriptions." };
 
