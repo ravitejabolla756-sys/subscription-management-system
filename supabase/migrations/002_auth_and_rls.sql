@@ -2,7 +2,7 @@ create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
 security definer
-set search_path = public
+set search_path = pg_catalog, public
 as $$
 begin
   insert into public.profiles (id, full_name, role)
@@ -21,12 +21,60 @@ create trigger on_auth_user_created
 after insert on auth.users
 for each row execute function public.handle_new_user();
 
+create or replace procedure public.bootstrap_first_admin(target_user_id uuid)
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $$
+begin
+  -- Serialize bootstrap attempts so two concurrent SQL Editor sessions cannot
+  -- both observe an empty-admin state and promote different users.
+  perform pg_advisory_xact_lock(78120431);
+
+  if exists (
+    select 1
+      from public.profiles
+     where role = 'admin'::public.app_role
+  ) then
+    raise exception 'An admin already exists; bootstrap is closed';
+  end if;
+
+  if not exists (
+    select 1
+      from auth.users
+     where id = target_user_id
+  ) then
+    raise exception 'The target Auth user does not exist';
+  end if;
+
+  update public.profiles
+     set role = 'admin'::public.app_role,
+         updated_at = timezone('utc', now())
+   where id = target_user_id
+     and role = 'customer'::public.app_role;
+
+  if not found then
+    if exists (select 1 from public.profiles where id = target_user_id) then
+      raise exception 'The target profile is not a customer profile';
+    end if;
+
+    raise exception 'The target Auth user has no profile';
+  end if;
+end;
+$$;
+
+-- This routine is intentionally callable only by a privileged SQL Editor
+-- session. It is not available through PostgREST RPC to normal users.
+revoke all on procedure public.bootstrap_first_admin(uuid) from public;
+revoke all on procedure public.bootstrap_first_admin(uuid) from anon;
+revoke all on procedure public.bootstrap_first_admin(uuid) from authenticated;
+
 create or replace function public.current_app_role()
 returns public.app_role
 language sql
 stable
 security definer
-set search_path = public
+set search_path = pg_catalog, public
 as $$
   select role
     from public.profiles
@@ -38,7 +86,7 @@ returns boolean
 language sql
 stable
 security definer
-set search_path = public
+set search_path = pg_catalog, public
 as $$
   select public.current_app_role() = 'admin'::public.app_role;
 $$;
@@ -48,7 +96,7 @@ returns boolean
 language sql
 stable
 security definer
-set search_path = public
+set search_path = pg_catalog, public
 as $$
   select public.current_app_role() in (
     'admin'::public.app_role,
@@ -61,7 +109,7 @@ returns boolean
 language sql
 stable
 security definer
-set search_path = public
+set search_path = pg_catalog, public
 as $$
   select exists (
     select 1
@@ -76,7 +124,7 @@ returns boolean
 language sql
 stable
 security definer
-set search_path = public
+set search_path = pg_catalog, public
 as $$
   select exists (
     select 1
@@ -92,7 +140,7 @@ returns boolean
 language sql
 stable
 security definer
-set search_path = public
+set search_path = pg_catalog, public
 as $$
   select exists (
     select 1
@@ -128,6 +176,22 @@ alter table public.invoices enable row level security;
 alter table public.invoice_lines enable row level security;
 alter table public.payments enable row level security;
 alter table public.discount_rules enable row level security;
+
+revoke create on schema public from anon;
+revoke create on schema public from authenticated;
+
+revoke all on
+  public.profiles,
+  public.customers,
+  public.products,
+  public.plans,
+  public.subscriptions,
+  public.subscription_lines,
+  public.invoices,
+  public.invoice_lines,
+  public.payments,
+  public.discount_rules
+from anon;
 
 grant select on public.profiles to authenticated;
 grant select, insert, update, delete on

@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { requireRole } from "@/lib/auth/server";
 import { ApiError,dbCheck,endpoint,jsonBody,jsonOk,money,uuid,optionalText } from "@/lib/api/http";
-export const runtime="nodejs";
 const schema=z.object({
  invoice_id:uuid,amount:money.refine(v=>Number(v)>0,"Amount must be positive"),
  payment_method:z.enum(["cash","card","bank_transfer","upi","other"]),

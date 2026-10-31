@@ -1,7 +1,8 @@
+import { connection } from "next/server";
 import { requireRole } from "@/lib/auth/server";
 import { dateOnly,dbCheck,endpoint,jsonOk } from "@/lib/api/http";
-export const runtime="nodejs";
 export async function GET(request:Request) {
+ await connection();
  return endpoint(async()=>{
   const {supabase}=await requireRole(["admin","staff"]);
   const p=new URL(request.url).searchParams;

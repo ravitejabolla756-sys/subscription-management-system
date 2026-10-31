@@ -1,8 +1,8 @@
 import { z } from "zod";
+import { connection } from "next/server";
 import { requireRole } from "@/lib/auth/server";
 import { booleanFilter, dbCheck, endpoint, jsonBody, jsonOk, uuid, optionalText } from "@/lib/api/http";
 
-export const runtime = "nodejs";
 const schema = z.object({
   display_name: z.string().trim().min(1).max(200),
   company_name: optionalText,
@@ -14,6 +14,7 @@ const schema = z.object({
 }).strict();
 
 export async function GET(request: Request) {
+  await connection();
   return endpoint(async () => {
     const { supabase } = await requireRole(["admin", "staff"]);
     const params = new URL(request.url).searchParams;

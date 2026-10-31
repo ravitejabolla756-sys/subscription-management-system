@@ -1,5 +1,6 @@
 import "server-only";
 
+import { unstable_rethrow } from "next/navigation";
 import { NextResponse } from "next/server";
 import { z, ZodError } from "zod";
 import { AuthorizationError } from "@/lib/auth/server";
@@ -48,6 +49,7 @@ export async function endpoint(handler: () => Promise<NextResponse>): Promise<Ne
   try {
     return await handler();
   } catch (error) {
+    unstable_rethrow(error);
     if (error instanceof AuthorizationError || error instanceof ApiError) {
       return NextResponse.json({
         data: null, error: { code: error.code, message: error.message, details: error instanceof ApiError ? error.details : {} }

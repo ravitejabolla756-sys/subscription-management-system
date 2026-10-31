@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { requireRole } from "@/lib/auth/server";
 import { ApiError, dateOnly, dbCheck, endpoint, jsonBody, jsonOk } from "@/lib/api/http";
-export const runtime = "nodejs";
 const bodySchema = z.object({ as_of_date: dateOnly.optional() }).strict();
 export async function POST(request: Request) {
   return endpoint(async () => {

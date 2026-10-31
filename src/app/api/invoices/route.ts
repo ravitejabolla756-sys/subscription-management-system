@@ -1,8 +1,9 @@
 import { z } from "zod";
+import { connection } from "next/server";
 import { requireRole } from "@/lib/auth/server";
-import { ApiError,dateOnly,dbCheck,endpoint,jsonOk,uuid } from "@/lib/api/http";
-export const runtime="nodejs";
+import { ApiError, dbCheck, endpoint, jsonOk, uuid } from "@/lib/api/http";
 export async function GET(request:Request){
+ await connection();
  return endpoint(async()=>{
   const {supabase}=await requireRole(["admin","staff","customer"]);
   const p=new URL(request.url).searchParams;

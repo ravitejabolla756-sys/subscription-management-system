@@ -27,7 +27,7 @@ create type public.discount_type as enum ('percentage', 'fixed_amount');
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
-set search_path = public
+set search_path = pg_catalog, public
 as $$
 begin
   new.updated_at = timezone('utc', now());
@@ -167,8 +167,7 @@ create table public.invoices (
   constraint invoices_due_non_negative check (due_amount >= 0),
   constraint invoices_period_unique unique (
     subscription_id,
-    billing_period_start,
-    billing_period_end
+    billing_period_start
   )
 );
 
@@ -289,7 +288,7 @@ create or replace function public.apply_payment_to_invoice()
 returns trigger
 language plpgsql
 security definer
-set search_path = public
+set search_path = pg_catalog, public
 as $$
 declare
   invoice_due numeric(12, 2);

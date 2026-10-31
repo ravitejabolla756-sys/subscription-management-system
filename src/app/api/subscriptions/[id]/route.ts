@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { requireRole } from "@/lib/auth/server";
 import { ApiError,dateOnly,dbCheck,endpoint,jsonBody,jsonOk,optionalText,uuid } from "@/lib/api/http";
-export const runtime="nodejs";
 const statuses=["draft","quotation","confirmed","active","closed"] as const;
 const transitions:Record<string,string[]>={draft:["quotation"],quotation:["confirmed"],confirmed:["active"],active:["closed"],closed:[]};
 const schema=z.object({status:z.enum(statuses),start_date:dateOnly.optional(),notes:optionalText}).strict();
