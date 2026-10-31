@@ -17,7 +17,7 @@ export type ApiEnvelope<T> = {
 };
 export type ProductRecord = {
   id: string;
-  sku: string;
+  sku: string | null;
   name: string;
   description: string | null;
   is_active: boolean;
@@ -41,7 +41,7 @@ export type CustomerRecord = {
   auth_user_id: string | null;
   display_name: string;
   company_name: string | null;
-  email: string;
+  email: string | null;
   phone: string | null;
   billing_address: BillingAddress | null;
   is_active: boolean;
@@ -84,6 +84,10 @@ export type PaymentRecord = {
   reference: string | null;
   notes: string | null;
 };
+export type PaymentResponse = {
+  payment: PaymentRecord;
+  invoice: Pick<InvoiceRecord, "id" | "status" | "total_amount" | "paid_amount" | "due_amount">;
+};
 export type DashboardRecord = {
   active_subscriptions: number;
   revenue_collected: string;
@@ -93,12 +97,14 @@ export type DashboardRecord = {
 };
 export type CreateCustomerInput = {
   display_name: string;
-  company_name: string;
-  email: string;
-  phone: string;
+  company_name: string | null;
+  email: string | null;
+  phone: string | null;
   billing_address: BillingAddress | null;
   auth_user_id: string | null;
 };
+export type CreateProductInput = Pick<ProductRecord, "sku" | "name" | "description" | "is_active">;
+export type CreatePlanInput = Pick<PlanRecord, "product_id" | "name" | "description" | "billing_interval" | "interval_count" | "price" | "currency" | "tax_rate" | "is_active">;
 export type CreateSubscriptionInput = {
   customer_id: string;
   plan_id: string;
@@ -110,7 +116,7 @@ export type CreatePaymentInput = {
   invoice_id: string;
   amount: string;
   payment_method: PaymentMethod;
-  paid_at: string;
+  paid_at?: string;
   reference: string;
   notes: string;
 };
@@ -127,8 +133,11 @@ export class ApiClientError extends Error {
 }
 export type AdminApi = {
   listProducts(query?: URLSearchParams): Promise<ProductRecord[]>;
+  createProduct(input: CreateProductInput): Promise<ProductRecord>;
   listPlans(query?: URLSearchParams): Promise<PlanRecord[]>;
+  createPlan(input: CreatePlanInput): Promise<PlanRecord>;
   listCustomers(query?: URLSearchParams): Promise<CustomerRecord[]>;
+  createCustomer(input: CreateCustomerInput): Promise<CustomerRecord>;
   listSubscriptions(query?: URLSearchParams): Promise<SubscriptionRecord[]>;
   createSubscription(
     input: CreateSubscriptionInput,
@@ -141,19 +150,32 @@ export type AdminApi = {
   ): Promise<SubscriptionRecord>;
   listInvoices(query?: URLSearchParams): Promise<InvoiceRecord[]>;
   listPayments(): Promise<PaymentRecord[]>;
-  createPayment(input: CreatePaymentInput): Promise<PaymentRecord>;
+  createPayment(input: CreatePaymentInput): Promise<PaymentResponse>;
   dashboard(query?: URLSearchParams): Promise<DashboardRecord>;
 };
 
+export class AuthenticationRequiredError extends ApiClientError {
+  constructor() {
+    super(401, "UNAUTHENTICATED", "Sign in to access the admin workspace.");
+    this.name = "AuthenticationRequiredError";
+  }
+}
+
 export function createAdminApi(
-  baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "",
+  baseUrl = "",
 ): AdminApi {
   const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
+    const { createClient } = await import("@/lib/supabase/client");
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new AuthenticationRequiredError();
     const response = await fetch(`${baseUrl}/api${path}`, {
       ...init,
+      credentials: "include",
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
         ...init?.headers,
       },
     });
@@ -173,8 +195,11 @@ export function createAdminApi(
   };
   return {
     listProducts: (query) => request(`/products${query ? `?${query}` : ""}`),
+    createProduct: (input) => request("/products", { method: "POST", body: JSON.stringify(input) }),
     listPlans: (query) => request(`/plans${query ? `?${query}` : ""}`),
+    createPlan: (input) => request("/plans", { method: "POST", body: JSON.stringify(input) }),
     listCustomers: (query) => request(`/customers${query ? `?${query}` : ""}`),
+    createCustomer: (input) => request("/customers", { method: "POST", body: JSON.stringify(input) }),
     listSubscriptions: (query) =>
       request(`/subscriptions${query ? `?${query}` : ""}`),
     createSubscription: (input) =>
