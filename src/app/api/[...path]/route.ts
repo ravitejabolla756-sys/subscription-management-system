@@ -14,8 +14,16 @@ async function forward(request: Request, context: { params: Promise<{ path: stri
   headers.delete("content-length");
   const cookie = request.headers.get("cookie");
   if (cookie) headers.set("cookie", cookie);
-  const response = await fetch(target, { method: request.method, headers, body: ["GET", "HEAD"].includes(request.method) ? undefined : await request.arrayBuffer(), redirect: "manual", cache: "no-store" });
-  return new NextResponse(response.body, { status: response.status, headers: response.headers });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8_000);
+  try {
+    const response = await fetch(target, { method: request.method, headers, body: ["GET", "HEAD"].includes(request.method) ? undefined : await request.arrayBuffer(), redirect: "manual", cache: "no-store", signal: controller.signal });
+    return new NextResponse(response.body, { status: response.status, headers: response.headers });
+  } catch {
+    return NextResponse.json({ data: null, error: { code: "BACKEND_UNAVAILABLE", message: "The Subflow API could not be reached. Try again shortly." }, meta: {} }, { status: 502 });
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export const GET = forward;
