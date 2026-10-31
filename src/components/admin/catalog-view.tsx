@@ -1,37 +1,729 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Filter, LoaderCircle, MoreHorizontal, Package, Pencil, Search, Tag, Users, X } from "lucide-react";
-import { ApiClientError, createAdminApi, type PlanRecord, type ProductRecord } from "@/lib/api";
+import {
+  FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  ChevronDown,
+  Filter,
+  LoaderCircle,
+  MoreHorizontal,
+  Package,
+  Pencil,
+  Search,
+  Tag,
+  Users,
+  X,
+} from "lucide-react";
+import {
+  ApiClientError,
+  createAdminApi,
+  type PlanRecord,
+  type ProductRecord,
+} from "@/lib/api";
 import { DemoNotice, PageHeader } from "@/components/admin/admin-shell";
-const styles = new Proxy({} as Record<string, string>, { get: (_, property) => String(property) });
+const styles = new Proxy({} as Record<string, string>, {
+  get: (_, property) => String(property),
+});
 
 type Product = ProductRecord & { status: "Active" | "Draft"; plans: number };
-type Plan = PlanRecord & { status: "Active" | "Draft"; product: string; subscribers: number; cadence: string };
+type Plan = PlanRecord & {
+  status: "Active" | "Draft";
+  product: string;
+  subscribers: number;
+  cadence: string;
+};
 type CatalogItem = Product | Plan;
 const statuses = ["All statuses", "Active", "Draft"] as const;
 
-function Badge({ status }: { status: "Active" | "Draft" }) { return <span className={`status-badge ${status.toLowerCase()}`}><span />{status}</span>; }
-function money(value: string, currency: string) { const numeric = Number(value); return Number.isFinite(numeric) ? new Intl.NumberFormat(undefined, { style: "currency", currency }).format(numeric) : "—"; }
-function CheckIcon() { return <span aria-hidden="true" className={styles.checkIcon}>✓</span>; }
-function CatalogSkeleton({ isProducts }: { isProducts: boolean }) { return <div className={styles.skeleton} aria-label={`Loading ${isProducts ? "products" : "plans"}`}><div className={styles.skeletonHeader}><span /><span /><span /></div>{Array.from({ length: 3 }).map((_, index) => <div className={styles.skeletonRow} key={index}><span /><span /><span /><span /></div>)}</div>; }
-function EmptyState({ hasFilters, clearFilters, isProducts }: { hasFilters: boolean; clearFilters: () => void; isProducts: boolean }) { return <div className={styles.emptyState}><span className={styles.emptyIcon}>{isProducts ? <Package size={22} /> : <Tag size={22} />}</span><h2>{hasFilters ? `No ${isProducts ? "products" : "plans"} found` : `No ${isProducts ? "products" : "plans"} yet`}</h2><p>{hasFilters ? "Try a different search or clear the filters." : `Create your first ${isProducts ? "product" : "subscription plan"} to start your catalog.`}</p>{hasFilters && <button type="button" className={styles.clearButton} onClick={clearFilters}>Clear filters</button>}</div>; }
-function Field({ label, description, error, children }: { label: string; description?: string; error?: string; children: React.ReactNode }) { return <label className={styles.field}><span className={styles.fieldLabel}>{label}</span>{description && <span className={styles.fieldDescription}>{description}</span>}{children}{error && <span className={styles.formError} role="alert">{error}</span>}</label>; }
-function Modal({ title, description, close, submit, children, saving, readOnly }: { title: string; description: string; close: () => void; submit: (event: FormEvent) => void; children: React.ReactNode; saving: boolean; readOnly: boolean }) { return <div className={styles.modalBackdrop} onMouseDown={close}><form className={styles.modal} onSubmit={submit} onMouseDown={(event) => event.stopPropagation()} onKeyDown={(event) => { if (event.key === "Escape") close(); }} role="dialog" aria-modal="true"><div className={styles.modalHead}><div><h2>{title}</h2><p>{description}</p></div><button type="button" className="icon-button" onClick={close} aria-label="Close dialog"><X size={19} /></button></div><div className={styles.modalBody}>{children}</div><div className={styles.modalActions}><button type="button" className="button secondary" onClick={close}>Close</button>{!readOnly && <button type="submit" className="button primary" disabled={saving}>{saving ? <LoaderCircle className="spin" size={16} /> : <CheckIcon />}{saving ? "Creating…" : "Create record"}</button>}</div></form></div>; }
+function Badge({ status }: { status: "Active" | "Draft" }) {
+  return (
+    <span className={`status-badge ${status.toLowerCase()}`}>
+      <span />
+      {status}
+    </span>
+  );
+}
+function money(value: string, currency: string) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric)
+    ? new Intl.NumberFormat(undefined, { style: "currency", currency }).format(
+        numeric,
+      )
+    : "—";
+}
+function CheckIcon() {
+  return (
+    <span aria-hidden="true" className={styles.checkIcon}>
+      ✓
+    </span>
+  );
+}
+function CatalogSkeleton({ isProducts }: { isProducts: boolean }) {
+  return (
+    <div
+      className={styles.skeleton}
+      aria-label={`Loading ${isProducts ? "products" : "plans"}`}
+    >
+      <div className={styles.skeletonHeader}>
+        <span />
+        <span />
+        <span />
+      </div>
+      {Array.from({ length: 3 }).map((_, index) => (
+        <div className={styles.skeletonRow} key={index}>
+          <span />
+          <span />
+          <span />
+          <span />
+        </div>
+      ))}
+    </div>
+  );
+}
+function EmptyState({
+  hasFilters,
+  clearFilters,
+  isProducts,
+}: {
+  hasFilters: boolean;
+  clearFilters: () => void;
+  isProducts: boolean;
+}) {
+  return (
+    <div className={styles.emptyState}>
+      <span className={styles.emptyIcon}>
+        {isProducts ? <Package size={22} /> : <Tag size={22} />}
+      </span>
+      <h2>
+        {hasFilters
+          ? `No ${isProducts ? "products" : "plans"} found`
+          : `No ${isProducts ? "products" : "plans"} yet`}
+      </h2>
+      <p>
+        {hasFilters
+          ? "Try a different search or clear the filters."
+          : `Create your first ${isProducts ? "product" : "subscription plan"} to start your catalog.`}
+      </p>
+      {hasFilters && (
+        <button
+          type="button"
+          className={styles.clearButton}
+          onClick={clearFilters}
+        >
+          Clear filters
+        </button>
+      )}
+    </div>
+  );
+}
+function Field({
+  label,
+  description,
+  error,
+  children,
+}: {
+  label: string;
+  description?: string;
+  error?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className={styles.field}>
+      <span className={styles.fieldLabel}>{label}</span>
+      {description && (
+        <span className={styles.fieldDescription}>{description}</span>
+      )}
+      {children}
+      {error && (
+        <span className={styles.formError} role="alert">
+          {error}
+        </span>
+      )}
+    </label>
+  );
+}
+function Modal({
+  title,
+  description,
+  close,
+  submit,
+  children,
+  saving,
+  readOnly,
+}: {
+  title: string;
+  description: string;
+  close: () => void;
+  submit: (event: FormEvent) => void;
+  children: React.ReactNode;
+  saving: boolean;
+  readOnly: boolean;
+}) {
+  return (
+    <div className={styles.modalBackdrop} onMouseDown={close}>
+      <form
+        className={styles.modal}
+        onSubmit={submit}
+        onMouseDown={(event) => event.stopPropagation()}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") close();
+        }}
+        role="dialog"
+        aria-modal="true"
+      >
+        <div className={styles.modalHead}>
+          <div>
+            <h2>{title}</h2>
+            <p>{description}</p>
+          </div>
+          <button
+            type="button"
+            className="icon-button"
+            onClick={close}
+            aria-label="Close dialog"
+          >
+            <X size={19} />
+          </button>
+        </div>
+        <div className={styles.modalBody}>{children}</div>
+        <div className={styles.modalActions}>
+          <button type="button" className="button secondary" onClick={close}>
+            Close
+          </button>
+          {!readOnly && (
+            <button type="submit" className="button primary" disabled={saving}>
+              {saving ? (
+                <LoaderCircle className="spin" size={16} />
+              ) : (
+                <CheckIcon />
+              )}
+              {saving ? "Creating…" : "Create record"}
+            </button>
+          )}
+        </div>
+      </form>
+    </div>
+  );
+}
 
-export default function CatalogView({ resource }: { resource: "products" | "plans" }) {
+export default function CatalogView({
+  resource,
+}: {
+  resource: "products" | "plans";
+}) {
   const isProducts = resource === "products";
   const [products, setProducts] = useState<Product[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
-  const [query, setQuery] = useState(""); const [statusFilter, setStatusFilter] = useState<typeof statuses[number]>("All statuses"); const [open, setOpen] = useState(false); const [editing, setEditing] = useState<CatalogItem | null>(null);
-  const [name, setName] = useState(""); const [sku, setSku] = useState(""); const [productId, setProductId] = useState(""); const [price, setPrice] = useState(""); const [cadence, setCadence] = useState<PlanRecord["billing_interval"]>("monthly"); const [error, setError] = useState(""); const [loading, setLoading] = useState(true); const [saving, setSaving] = useState(false); const nameRef = useRef<HTMLInputElement>(null);
-  const load = useCallback(async () => { setLoading(true); setError(""); try { const api = createAdminApi(); const productData = await api.listProducts(); setProducts(productData.map((item) => ({ ...item, status: item.is_active ? "Active" : "Draft", plans: 0 }))); if (!isProducts) { const planData = await api.listPlans(); const productNames = new Map(productData.map((item) => [item.id, item.name])); setPlans(planData.map((item) => ({ ...item, status: item.is_active ? "Active" : "Draft", product: productNames.get(item.product_id) ?? item.product_id, subscribers: 0, cadence: item.billing_interval }))); } } catch (requestError) { setError(requestError instanceof ApiClientError ? requestError.message : `Unable to load ${resource}.`); } finally { setLoading(false); } }, [isProducts, resource]);
-  useEffect(() => { const timer = window.setTimeout(() => { void load(); }, 0); return () => window.clearTimeout(timer); }, [load]);
-  useEffect(() => { if (open) nameRef.current?.focus(); }, [open]);
-  const productOptions = useMemo(() => products, [products]); const rows: CatalogItem[] = isProducts ? products : plans;
-  const filteredRows = useMemo(() => { const normalized = query.trim().toLowerCase(); return rows.filter((item) => { const text = isProducts ? `${(item as Product).name} ${(item as Product).sku ?? ""} ${(item as Product).description ?? ""}` : `${(item as Plan).name} ${(item as Plan).product} ${(item as Plan).billing_interval}`; return (!normalized || text.toLowerCase().includes(normalized)) && (statusFilter === "All statuses" || item.status === statusFilter); }); }, [isProducts, query, rows, statusFilter]);
-  const start = (item?: CatalogItem) => { setEditing(item ?? null); setName(item?.name ?? ""); setSku(isProducts ? (item as Product | undefined)?.sku ?? "" : ""); setProductId(isProducts ? "" : (item as Plan | undefined)?.product_id ?? productOptions[0]?.id ?? ""); setPrice(isProducts ? "" : (item as Plan | undefined)?.price ?? ""); setCadence((item as Plan | undefined)?.billing_interval ?? "monthly"); setError(""); setOpen(true); };
-  const submit = async (event: FormEvent) => { event.preventDefault(); if (editing) return setError("The backend contract currently exposes create-only catalog operations."); if (name.trim().length < 1) return setError("Enter a name."); if (!isProducts && !productId) return setError("Choose a product for this plan."); setSaving(true); setError(""); try { const api = createAdminApi(); if (isProducts) await api.createProduct({ sku: sku.trim() || null, name: name.trim(), description: null, is_active: true }); else await api.createPlan({ product_id: productId, name: name.trim(), description: null, billing_interval: cadence, interval_count: 1, price: price.trim() || "0.00", currency: "INR", tax_rate: "0.00", is_active: true }); await load(); setOpen(false); } catch (requestError) { setError(requestError instanceof ApiClientError ? requestError.message : "Unable to create record."); } finally { setSaving(false); } };
-  const clearFilters = () => { setQuery(""); setStatusFilter("All statuses"); };
-  return <div className={styles.page}><PageHeader title={isProducts ? "Products" : "Subscription plans"} description={isProducts ? "Build the catalog behind every customer subscription." : "Shape recurring pricing for every customer segment."} action={isProducts ? "Add product" : "Create plan"} onAction={() => start()} /><DemoNotice>Live {isProducts ? "product" : "plan"} data from the authenticated Subflow API.</DemoNotice><section className={styles.summary} aria-label={`${isProducts ? "Product" : "Plan"} summary`}><div><span className={styles.summaryIcon}>{isProducts ? <Package size={16} /> : <Tag size={16} />}</span><div><strong>{rows.length}</strong><span>Total {isProducts ? "products" : "plans"}</span></div></div><div><span className={`${styles.summaryIcon} ${styles.green}`}><CheckIcon /></span><div><strong>{rows.filter((item) => item.status === "Active").length}</strong><span>Active {isProducts ? "products" : "plans"}</span></div></div><div><span className={`${styles.summaryIcon} ${styles.purple}`}>{isProducts ? <Tag size={16} /> : <Users size={16} />}</span><div><strong>{isProducts ? "—" : "—"}</strong><span>{isProducts ? "Plans attached" : "Subscribers"}</span></div></div></section><article className={`panel ${styles.catalogPanel}`}><div className={styles.catalogHeader}><div><h2>{isProducts ? "Product catalog" : "Pricing catalog"}</h2><p>{isProducts ? "Persisted offerings from Supabase." : "Persisted cadence and pricing from Supabase."}</p></div><span className={styles.resultCount} aria-live="polite">{filteredRows.length} of {rows.length} shown</span></div><div className={styles.toolbar}><label className={styles.searchBox}><Search size={17} aria-hidden="true" /><span className={styles.srOnly}>Search {isProducts ? "products" : "plans"}</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${isProducts ? "products" : "plans"}`} />{query && <button type="button" onClick={() => setQuery("")} aria-label="Clear search"><X size={14} /></button>}</label><label className={styles.selectBox}><Filter size={14} aria-hidden="true" /><span className={styles.srOnly}>Filter by status</span><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}>{statuses.map((value) => <option key={value}>{value}</option>)}</select><ChevronDown size={14} aria-hidden="true" /></label></div>{loading ? <CatalogSkeleton isProducts={isProducts} /> : error ? <div className={styles.emptyState} role="alert"><h2>Unable to load {resource}</h2><p>{error}</p><button type="button" className={styles.clearButton} onClick={() => void load()}>Try again</button></div> : filteredRows.length === 0 ? <EmptyState hasFilters={Boolean(query.trim()) || statusFilter !== "All statuses"} clearFilters={clearFilters} isProducts={isProducts} /> : <div className={styles.tableScroll}><table className={styles.catalogTable}><thead><tr>{isProducts ? <><th>Product</th><th>SKU</th><th>Description</th></> : <><th>Plan</th><th>Product</th><th>Price</th><th>Cadence</th></>}<th>Status</th><th><span className={styles.srOnly}>Actions</span></th></tr></thead><tbody>{filteredRows.map((item) => isProducts ? <tr key={item.id}><td data-label="Product"><div className={styles.primaryCell}><span className={styles.productThumb}><Package size={17} /></span><div><strong>{(item as Product).name}</strong><span>{(item as Product).id}</span></div></div></td><td data-label="SKU">{(item as Product).sku || "—"}</td><td data-label="Description">{(item as Product).description || "—"}</td><td data-label="Status"><Badge status={item.status} /></td><td className={styles.actions}><button type="button" className={styles.editButton} onClick={() => start(item)}><Pencil size={13} />View</button><button type="button" className={styles.moreButton} aria-label={`More actions for ${(item as Product).name}`}><MoreHorizontal size={17} /></button></td></tr> : <tr key={item.id}><td data-label="Plan"><div className={styles.primaryCell}><span className={styles.planThumb}><Tag size={16} /></span><div><strong>{(item as Plan).name}</strong><span>{(item as Plan).id}</span></div></div></td><td data-label="Product">{(item as Plan).product}</td><td data-label="Price"><strong className={styles.price}>{money((item as Plan).price, (item as Plan).currency)}</strong></td><td data-label="Cadence">{(item as Plan).interval_count} × {(item as Plan).cadence}</td><td data-label="Status"><Badge status={item.status} /></td><td className={styles.actions}><button type="button" className={styles.editButton} onClick={() => start(item)}><Pencil size={13} />View</button><button type="button" className={styles.moreButton} aria-label={`More actions for ${(item as Plan).name}`}><MoreHorizontal size={17} /></button></td></tr>)}</tbody></table></div>}</article><div className={styles.footerHint}><span>{isProducts ? "Product creation is persisted through the products API." : "Plan creation is persisted through the plans API."}</span></div>{open && <Modal title={`${editing ? "View" : "Create"} ${isProducts ? "product" : "subscription plan"}`} description={editing ? "This record is read-only because no update route is implemented yet." : "Create a persisted catalog record."} close={() => setOpen(false)} submit={submit} saving={saving} readOnly={Boolean(editing)}><div className={styles.formSection}><Field label={isProducts ? "Product name" : "Plan name"} description="Use a clear, recognizable name." error={error}><input ref={nameRef} value={name} onChange={(event) => { setName(event.target.value); setError(""); }} readOnly={Boolean(editing)} /></Field>{isProducts ? <Field label="SKU" description="Optional product identifier."><input value={sku} onChange={(event) => setSku(event.target.value)} readOnly={Boolean(editing)} /></Field> : <><Field label="Product"><select value={productId} onChange={(event) => setProductId(event.target.value)} disabled={Boolean(editing)}>{productOptions.map((value) => <option key={value.id} value={value.id}>{value.name}</option>)}</select></Field><div className={styles.formGrid}><Field label="Price"><input value={price} onChange={(event) => setPrice(event.target.value.replace(/[^0-9.]/g, ""))} inputMode="decimal" readOnly={Boolean(editing)} /></Field><Field label="Billing interval"><select value={cadence} onChange={(event) => setCadence(event.target.value as PlanRecord["billing_interval"])} disabled={Boolean(editing)}><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="yearly">Yearly</option></select></Field></div></>}</div></Modal>}</div>;
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] =
+    useState<(typeof statuses)[number]>("All statuses");
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<CatalogItem | null>(null);
+  const [name, setName] = useState("");
+  const [sku, setSku] = useState("");
+  const [description, setDescription] = useState("");
+  const [productId, setProductId] = useState("");
+  const [price, setPrice] = useState("");
+  const [cadence, setCadence] =
+    useState<PlanRecord["billing_interval"]>("monthly");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const nameRef = useRef<HTMLInputElement>(null);
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const api = createAdminApi();
+      const productData = await api.listProducts();
+      setProducts(
+        productData.map((item) => ({
+          ...item,
+          status: item.is_active ? "Active" : "Draft",
+          plans: 0,
+        })),
+      );
+      if (!isProducts) {
+        const planData = await api.listPlans();
+        const productNames = new Map(
+          productData.map((item) => [item.id, item.name]),
+        );
+        setPlans(
+          planData.map((item) => ({
+            ...item,
+            status: item.is_active ? "Active" : "Draft",
+            product: productNames.get(item.product_id) ?? item.product_id,
+            subscribers: 0,
+            cadence: item.billing_interval,
+          })),
+        );
+      }
+    } catch (requestError) {
+      setError(
+        requestError instanceof ApiClientError
+          ? requestError.message
+          : `Unable to load ${resource}.`,
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [isProducts, resource]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void load();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [load]);
+  useEffect(() => {
+    if (open) nameRef.current?.focus();
+  }, [open]);
+  const productOptions = useMemo(() => products, [products]);
+  const rows: CatalogItem[] = isProducts ? products : plans;
+  const filteredRows = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    return rows.filter((item) => {
+      const text = isProducts
+        ? `${(item as Product).name} ${(item as Product).sku ?? ""} ${(item as Product).description ?? ""}`
+        : `${(item as Plan).name} ${(item as Plan).product} ${(item as Plan).billing_interval}`;
+      return (
+        (!normalized || text.toLowerCase().includes(normalized)) &&
+        (statusFilter === "All statuses" || item.status === statusFilter)
+      );
+    });
+  }, [isProducts, query, rows, statusFilter]);
+  const start = (item?: CatalogItem) => {
+    setEditing(item ?? null);
+    setName(item?.name ?? "");
+    setSku(isProducts ? ((item as Product | undefined)?.sku ?? "") : "");
+    setDescription(item?.description ?? "");
+    setProductId(
+      isProducts
+        ? ""
+        : ((item as Plan | undefined)?.product_id ??
+            productOptions[0]?.id ??
+            ""),
+    );
+    setPrice(isProducts ? "" : ((item as Plan | undefined)?.price ?? ""));
+    setCadence((item as Plan | undefined)?.billing_interval ?? "monthly");
+    setError("");
+    setSuccess("");
+    setOpen(true);
+  };
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (editing)
+      return setError(
+        "The backend contract currently exposes create-only catalog operations.",
+      );
+    if (name.trim().length < 1) return setError("Enter a name.");
+    if (!isProducts && !productId)
+      return setError("Choose a product for this plan.");
+    if (!isProducts) {
+      const normalizedPrice = price.trim();
+      const numericPrice = Number(normalizedPrice);
+      if (!normalizedPrice || !Number.isFinite(numericPrice) || numericPrice < 0)
+        return setError("Enter a valid non-negative price.");
+    }
+    setSaving(true);
+    setError("");
+    try {
+      const api = createAdminApi();
+      if (isProducts)
+        await api.createProduct({
+          sku: sku.trim() || null,
+          name: name.trim(),
+          description: description.trim() || null,
+          is_active: true,
+        });
+      else
+        await api.createPlan({
+          product_id: productId,
+          name: name.trim(),
+          description: description.trim() || null,
+          billing_interval: cadence,
+          interval_count: 1,
+          price: price.trim() || "0.00",
+          currency: "INR",
+          tax_rate: "0.00",
+          is_active: true,
+        });
+      await load();
+      if (!isProducts) setSuccess("Plan created successfully.");
+      setOpen(false);
+    } catch (requestError) {
+      setError(
+        requestError instanceof ApiClientError
+          ? requestError.message
+          : "Unable to create record.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+  const clearFilters = () => {
+    setQuery("");
+    setStatusFilter("All statuses");
+  };
+  return (
+    <div className={styles.page}>
+      <PageHeader
+        title={isProducts ? "Products" : "Subscription plans"}
+        description={
+          isProducts
+            ? "Build the catalog behind every customer subscription."
+            : "Shape recurring pricing for every customer segment."
+        }
+        action={isProducts ? "Add product" : "Create plan"}
+        onAction={() => start()}
+      />
+      <DemoNotice>
+        Live {isProducts ? "product" : "plan"} data from the authenticated
+        Subflow API.
+      </DemoNotice>
+      {!isProducts && success && (
+        <div className="operation-success" role="status">
+          {success}
+        </div>
+      )}
+      <section
+        className={styles.summary}
+        aria-label={`${isProducts ? "Product" : "Plan"} summary`}
+      >
+        <div>
+          <span className={styles.summaryIcon}>
+            {isProducts ? <Package size={16} /> : <Tag size={16} />}
+          </span>
+          <div>
+            <strong>{rows.length}</strong>
+            <span>Total {isProducts ? "products" : "plans"}</span>
+          </div>
+        </div>
+        <div>
+          <span className={`${styles.summaryIcon} ${styles.green}`}>
+            <CheckIcon />
+          </span>
+          <div>
+            <strong>
+              {rows.filter((item) => item.status === "Active").length}
+            </strong>
+            <span>Active {isProducts ? "products" : "plans"}</span>
+          </div>
+        </div>
+        <div>
+          <span className={`${styles.summaryIcon} ${styles.purple}`}>
+            {isProducts ? <Tag size={16} /> : <Users size={16} />}
+          </span>
+          <div>
+            <strong>{isProducts ? "—" : "—"}</strong>
+            <span>{isProducts ? "Plans attached" : "Subscribers"}</span>
+          </div>
+        </div>
+      </section>
+      <article className={`panel ${styles.catalogPanel}`}>
+        <div className={styles.catalogHeader}>
+          <div>
+            <h2>{isProducts ? "Product catalog" : "Pricing catalog"}</h2>
+            <p>
+              {isProducts
+                ? "Persisted offerings from Supabase."
+                : "Persisted cadence and pricing from Supabase."}
+            </p>
+          </div>
+          <span className={styles.resultCount} aria-live="polite">
+            {filteredRows.length} of {rows.length} shown
+          </span>
+        </div>
+        <div className={styles.toolbar}>
+          <label className={styles.searchBox}>
+            <Search size={17} aria-hidden="true" />
+            <span className={styles.srOnly}>
+              Search {isProducts ? "products" : "plans"}
+            </span>
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={`Search ${isProducts ? "products" : "plans"}`}
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                aria-label="Clear search"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </label>
+          <label className={styles.selectBox}>
+            <Filter size={14} aria-hidden="true" />
+            <span className={styles.srOnly}>Filter by status</span>
+            <select
+              value={statusFilter}
+              onChange={(event) =>
+                setStatusFilter(event.target.value as typeof statusFilter)
+              }
+            >
+              {statuses.map((value) => (
+                <option key={value}>{value}</option>
+              ))}
+            </select>
+            <ChevronDown size={14} aria-hidden="true" />
+          </label>
+        </div>
+        {loading ? (
+          <CatalogSkeleton isProducts={isProducts} />
+        ) : error ? (
+          <div className={styles.emptyState} role="alert">
+            <h2>Unable to load {resource}</h2>
+            <p>{error}</p>
+            <button
+              type="button"
+              className={styles.clearButton}
+              onClick={() => void load()}
+            >
+              Try again
+            </button>
+          </div>
+        ) : filteredRows.length === 0 ? (
+          <EmptyState
+            hasFilters={
+              Boolean(query.trim()) || statusFilter !== "All statuses"
+            }
+            clearFilters={clearFilters}
+            isProducts={isProducts}
+          />
+        ) : (
+          <div className={styles.tableScroll}>
+            <table className={styles.catalogTable}>
+              <thead>
+                <tr>
+                  {isProducts ? (
+                    <>
+                      <th>Product</th>
+                      <th>SKU</th>
+                      <th>Description</th>
+                    </>
+                  ) : (
+                    <>
+                      <th>Plan</th>
+                      <th>Product</th>
+                      <th>Price</th>
+                      <th>Cadence</th>
+                    </>
+                  )}
+                  <th>Status</th>
+                  <th>
+                    <span className={styles.srOnly}>Actions</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRows.map((item) =>
+                  isProducts ? (
+                    <tr key={item.id}>
+                      <td data-label="Product">
+                        <div className={styles.primaryCell}>
+                          <span className={styles.productThumb}>
+                            <Package size={17} />
+                          </span>
+                          <div>
+                            <strong>{(item as Product).name}</strong>
+                            <span>{(item as Product).id}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td data-label="SKU">{(item as Product).sku || "—"}</td>
+                      <td data-label="Description">
+                        {(item as Product).description || "—"}
+                      </td>
+                      <td data-label="Status">
+                        <Badge status={item.status} />
+                      </td>
+                      <td className={styles.actions}>
+                        <button
+                          type="button"
+                          className={styles.editButton}
+                          onClick={() => start(item)}
+                        >
+                          <Pencil size={13} />
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ) : (
+                    <tr key={item.id}>
+                      <td data-label="Plan">
+                        <div className={styles.primaryCell}>
+                          <span className={styles.planThumb}>
+                            <Tag size={16} />
+                          </span>
+                          <div>
+                            <strong>{(item as Plan).name}</strong>
+                            <span>{(item as Plan).id}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td data-label="Product">{(item as Plan).product}</td>
+                      <td data-label="Price">
+                        <strong className={styles.price}>
+                          {money((item as Plan).price, (item as Plan).currency)}
+                        </strong>
+                      </td>
+                      <td data-label="Cadence">
+                        {(item as Plan).interval_count} ×{" "}
+                        {(item as Plan).cadence}
+                      </td>
+                      <td data-label="Status">
+                        <Badge status={item.status} />
+                      </td>
+                      <td className={styles.actions}>
+                        <button
+                          type="button"
+                          className={styles.editButton}
+                          onClick={() => start(item)}
+                        >
+                          <Pencil size={13} />
+                          View
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.moreButton}
+                          aria-label={`More actions for ${(item as Plan).name}`}
+                        >
+                          <MoreHorizontal size={17} />
+                        </button>
+                      </td>
+                    </tr>
+                  ),
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </article>
+      <div className={styles.footerHint}>
+        <span>
+          {isProducts
+            ? "Product creation is persisted through the products API."
+            : "Plan creation is persisted through the plans API."}
+        </span>
+      </div>
+      {open && (
+        <Modal
+          title={`${editing ? "View" : "Create"} ${isProducts ? "product" : "subscription plan"}`}
+          description={
+            editing
+              ? "This record is read-only because no update route is implemented yet."
+              : "Create a persisted catalog record."
+          }
+          close={() => setOpen(false)}
+          submit={submit}
+          saving={saving}
+          readOnly={Boolean(editing)}
+        >
+          <div className={styles.formSection}>
+            <Field
+              label={isProducts ? "Product name" : "Plan name"}
+              description="Use a clear, recognizable name."
+              error={error}
+            >
+              <input
+                ref={nameRef}
+                value={name}
+                onChange={(event) => {
+                  setName(event.target.value);
+                  setError("");
+                }}
+                readOnly={Boolean(editing)}
+              />
+            </Field>
+            {isProducts ? (
+              <>
+                <Field label="SKU" description="Optional product identifier.">
+                  <input
+                    value={sku}
+                    onChange={(event) => setSku(event.target.value)}
+                    readOnly={Boolean(editing)}
+                  />
+                </Field>
+                <Field
+                  label="Description"
+                  description="Optional context shown in the product catalog."
+                >
+                  <textarea
+                    value={description}
+                    onChange={(event) => setDescription(event.target.value)}
+                    readOnly={Boolean(editing)}
+                    rows={3}
+                  />
+                </Field>
+              </>
+            ) : (
+              <>
+                <Field label="Product">
+                  <select
+                    value={productId}
+                    onChange={(event) => setProductId(event.target.value)}
+                    disabled={Boolean(editing)}
+                  >
+                    {productOptions.map((value) => (
+                      <option key={value.id} value={value.id}>
+                        {value.name}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field
+                  label="Description"
+                  description="Optional context for this pricing plan."
+                >
+                  <textarea
+                    value={description}
+                    onChange={(event) => setDescription(event.target.value)}
+                    readOnly={Boolean(editing)}
+                    rows={3}
+                  />
+                </Field>
+                <div className={styles.formGrid}>
+                  <Field label="Price">
+                    <input
+                      value={price}
+                      onChange={(event) =>
+                        setPrice(event.target.value.replace(/[^0-9.]/g, ""))
+                      }
+                      inputMode="decimal"
+                      readOnly={Boolean(editing)}
+                    />
+                  </Field>
+                  <Field label="Billing interval">
+                    <select
+                      value={cadence}
+                      onChange={(event) =>
+                        setCadence(
+                          event.target.value as PlanRecord["billing_interval"],
+                        )
+                      }
+                      disabled={Boolean(editing)}
+                    >
+                      <option value="daily">Daily</option>
+                      <option value="weekly">Weekly</option>
+                      <option value="monthly">Monthly</option>
+                      <option value="yearly">Yearly</option>
+                    </select>
+                  </Field>
+                </div>
+              </>
+            )}
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
 }

@@ -1,8 +1,9 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import Link from "next/link";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
-import { Globe2, LogIn, LoaderCircle, LockKeyhole } from "lucide-react";
+import { LogIn, LoaderCircle, LockKeyhole } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { isUiPreview } from "@/lib/preview-mode";
 
@@ -49,7 +50,8 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const { session, loading, configurationError } = useAdminSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const [submittingMethod, setSubmittingMethod] = useState<"password" | "google" | null>(null);
+  const submitting = submittingMethod !== null;
   const [error, setError] = useState(() => {
     if (typeof window === "undefined") return "";
     const authError = new URLSearchParams(window.location.search).get("auth_error");
@@ -61,7 +63,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signInWithGoogle = async () => {
-    setSubmitting(true);
+    setSubmittingMethod("google");
     setError("");
     try {
       const supabase = createClient();
@@ -73,11 +75,11 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       });
       if (oauthError) {
         setError(oauthError.message);
-        setSubmitting(false);
+        setSubmittingMethod(null);
       }
     } catch (oauthError) {
       setError(oauthError instanceof Error ? oauthError.message : "Unable to continue with Google.");
-      setSubmitting(false);
+      setSubmittingMethod(null);
     }
   };
 
@@ -85,7 +87,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    setSubmitting(true);
+    setSubmittingMethod("password");
     setError("");
     try {
       const supabase = createClient();
@@ -94,7 +96,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     } catch (signInError) {
       setError(signInError instanceof Error ? signInError.message : "Unable to sign in.");
     } finally {
-      setSubmitting(false);
+      setSubmittingMethod(null);
     }
   };
 
@@ -112,10 +114,16 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       <form onSubmit={submit} className="auth-form">
         <label>Email address<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required /></label>
         <label>Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required /></label>
-        <button className="button primary auth-submit" disabled={submitting || Boolean(configurationError)}>{submitting ? <LoaderCircle className="spin" size={17} /> : <LogIn size={17} />}{submitting ? "Signing in…" : "Sign in"}</button>
+        <button className="button primary auth-submit" disabled={submitting || Boolean(configurationError)}>{submittingMethod === "password" ? <LoaderCircle className="spin" size={17} /> : <LogIn size={17} />}{submittingMethod === "password" ? "Signing in…" : "Sign in"}</button>
       </form>
+      <div className="auth-links"><Link href="/forgot-password">Forgot password?</Link></div>
       <div className="auth-divider" aria-hidden="true"><span>or</span></div>
-      <button type="button" className="button secondary auth-google" onClick={() => void signInWithGoogle()} disabled={submitting || Boolean(configurationError)}><Globe2 size={17} aria-hidden="true" />Continue with Google</button>
+      <button type="button" className="button secondary auth-google" onClick={() => void signInWithGoogle()} disabled={submitting || Boolean(configurationError)}>{submittingMethod === "google" ? <LoaderCircle className="spin" size={17} aria-hidden="true" /> : <GoogleLogo />}{submittingMethod === "google" ? "Opening Google…" : "Continue with Google"}</button>
+      <p className="auth-switch">New to SubFlow? <Link href="/signup">Create an account</Link></p>
     </section>
   </main>;
+}
+
+function GoogleLogo() {
+  return <svg className="google-logo" viewBox="0 0 24 24" role="img" aria-label="Google"><path fill="#4285F4" d="M21.35 12.27c0-.73-.07-1.43-.2-2.1H12v3.98h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.15c1.84-1.69 2.9-4.18 2.9-7.27Z"/><path fill="#34A853" d="M12 21.9c2.63 0 4.84-.87 6.45-2.36l-3.15-2.45c-.87.58-1.98.92-3.3.92-2.54 0-4.7-1.72-5.47-4.03H3.28v2.53A9.75 9.75 0 0 0 12 21.9Z"/><path fill="#FBBC05" d="M6.53 13.98A5.86 5.86 0 0 1 6.23 12c0-.69.12-1.36.3-1.98V7.49H3.28A9.75 9.75 0 0 0 2.25 12c0 1.57.38 3.06 1.03 4.51l3.25-2.53Z"/><path fill="#EA4335" d="M12 5.99c1.43 0 2.71.49 3.72 1.45l2.79-2.79C16.84 3.07 14.63 2.1 12 2.1a9.75 9.75 0 0 0-8.72 5.39l3.25 2.53C7.3 7.71 9.46 5.99 12 5.99Z"/></svg>;
 }
