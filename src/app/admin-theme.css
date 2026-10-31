@@ -163,6 +163,7 @@ select:focus-visible {
 .attention-item-arrow { color: var(--color-dim); }
 .attention-empty { display: grid; gap: 5px; padding: 20px 16px; border-top: 1px solid var(--color-rule); color: var(--color-muted); font-size: 12px; }
 .attention-empty strong { color: var(--color-ink); font-size: 13px; }
+.operation-success { margin: 0 0 12px; padding: 10px 12px; border: 1px solid var(--color-rule); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-muted); font-size: 12px; }
 .recent-records-panel { margin-top: 12px; }
 .recent-records-links { display: flex; gap: 14px; align-items: center; font-size: 12px; }
 .recent-records-links a { color: var(--color-accent-ink); font-weight: 700; text-decoration: none; }

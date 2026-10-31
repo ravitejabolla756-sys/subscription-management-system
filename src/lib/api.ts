@@ -120,6 +120,11 @@ export type CreatePaymentInput = {
   reference: string;
   notes: string;
 };
+export type BillingRunResult = {
+  processed: number;
+  created_invoice_ids: string[];
+  skipped: number;
+};
 
 export class ApiClientError extends Error {
   constructor(
@@ -151,6 +156,7 @@ export type AdminApi = {
   listInvoices(query?: URLSearchParams): Promise<InvoiceRecord[]>;
   listPayments(): Promise<PaymentRecord[]>;
   createPayment(input: CreatePaymentInput): Promise<PaymentRecord>;
+  runBilling(input?: { as_of_date?: string }): Promise<BillingRunResult>;
   dashboard(query?: URLSearchParams): Promise<DashboardRecord>;
 };
 
@@ -217,6 +223,8 @@ export function createAdminApi(
     listPayments: () => request("/payments"),
     createPayment: (input) =>
       request("/payments", { method: "POST", body: JSON.stringify(input) }),
+    runBilling: (input) =>
+      request("/billing/run", { method: "POST", body: JSON.stringify(input ?? {}) }),
     dashboard: (query) => request(`/dashboard${query ? `?${query}` : ""}`),
   };
 }
