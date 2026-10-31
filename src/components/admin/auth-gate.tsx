@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { LogIn, LoaderCircle, LockKeyhole } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { isUiPreview } from "@/lib/preview-mode";
 
 export function useAdminSession() {
   const [session, setSession] = useState<Session | null>(null);
@@ -11,6 +12,10 @@ export function useAdminSession() {
   const [configurationError, setConfigurationError] = useState("");
 
   useEffect(() => {
+    if (isUiPreview) {
+      setLoading(false);
+      return;
+    }
     let mounted = true;
     try {
       const supabase = createClient();
@@ -46,6 +51,8 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  if (isUiPreview) return <>{children}</>;
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();

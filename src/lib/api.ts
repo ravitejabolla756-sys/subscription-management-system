@@ -1,3 +1,6 @@
+import { isUiPreview } from "@/lib/preview-mode";
+import { createPreviewApi } from "@/lib/preview-data";
+
 export type SubscriptionStatus =
   "draft" | "quotation" | "confirmed" | "active" | "closed";
 export type BillingInterval = "daily" | "weekly" | "monthly" | "yearly";
@@ -94,6 +97,7 @@ export type DashboardRecord = {
   outstanding_amount: string;
   overdue_invoices: number;
   subscription_summary: Record<SubscriptionStatus, number>;
+  revenue_series?: Array<{ label: string; revenue: number; subscriptions: number }>;
 };
 export type CreateCustomerInput = {
   display_name: string;
@@ -160,10 +164,10 @@ export class AuthenticationRequiredError extends ApiClientError {
     this.name = "AuthenticationRequiredError";
   }
 }
-
 export function createAdminApi(
   baseUrl = "",
 ): AdminApi {
+  if (isUiPreview) return createPreviewApi();
   const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
     const { createClient } = await import("@/lib/supabase/client");
     const supabase = createClient();
