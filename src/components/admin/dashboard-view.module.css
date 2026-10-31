@@ -1,0 +1,131 @@
+.subscriptionMixBody {
+  display: grid;
+  align-content: start;
+  gap: 22px;
+  min-height: 250px;
+  padding: 20px 21px 22px;
+}
+
+.subscriptionMixTotal {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+}
+
+.subscriptionMixTotal strong {
+  color: var(--color-ink);
+  font-size: 30px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+
+.subscriptionMixTotal span {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.subscriptionMixDistribution {
+  display: grid;
+  gap: 10px;
+}
+
+.subscriptionMixBar {
+  display: flex;
+  width: 100%;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--color-paper-2);
+}
+
+.subscriptionMixSegment {
+  min-width: 2px;
+  height: 100%;
+  background: var(--color-rule-strong);
+}
+
+.subscriptionMixSegment + .subscriptionMixSegment {
+  border-left: 2px solid var(--color-surface);
+}
+
+.subscriptionMixSegmentActive {
+  background: var(--color-accent);
+}
+
+.subscriptionMixRows {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 18px;
+}
+
+.subscriptionMixRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  color: var(--color-muted);
+  font-size: 11px;
+}
+
+.subscriptionMixLabel {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  gap: 7px;
+}
+
+.subscriptionMixLabel::before {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--color-rule-strong);
+  content: "";
+}
+
+.subscriptionMixRowActive .subscriptionMixLabel {
+  color: var(--color-ink);
+  font-weight: 650;
+}
+
+.subscriptionMixRowActive .subscriptionMixLabel::before {
+  background: var(--color-accent);
+}
+
+.subscriptionMixRow strong {
+  color: var(--color-ink);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.subscriptionMixEmpty {
+  display: grid;
+  gap: 6px;
+  align-content: center;
+  min-height: 170px;
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.subscriptionMixEmpty strong {
+  color: var(--color-ink);
+  font-size: 13px;
+}
+
+@media (max-width: 40rem) {
+  .subscriptionMixBody {
+    padding-inline: 15px;
+  }
+
+  .subscriptionMixRows {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .subscriptionMixBody * {
+    transition-duration: 0.01ms !important;
+  }
+}
