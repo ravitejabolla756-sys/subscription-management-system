@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
-import { LogIn, LoaderCircle, LockKeyhole } from "lucide-react";
+import { Globe2, LogIn, LoaderCircle, LockKeyhole } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { isUiPreview } from "@/lib/preview-mode";
 
@@ -50,7 +50,36 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(() => {
+    if (typeof window === "undefined") return "";
+    const authError = new URLSearchParams(window.location.search).get("auth_error");
+    return authError === "oauth_callback_missing_code" ? "Google sign-in did not return an authorization code." : authError ? "Google sign-in could not be completed. Try again." : "";
+  });
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has("auth_error")) window.history.replaceState({}, document.title, window.location.pathname);
+  }, []);
+
+  const signInWithGoogle = async () => {
+    setSubmitting(true);
+    setError("");
+    try {
+      const supabase = createClient();
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: process.env.NEXT_PUBLIC_AUTH_CALLBACK_URL ?? "https://subflow-red.vercel.app/auth/callback",
+        },
+      });
+      if (oauthError) {
+        setError(oauthError.message);
+        setSubmitting(false);
+      }
+    } catch (oauthError) {
+      setError(oauthError instanceof Error ? oauthError.message : "Unable to continue with Google.");
+      setSubmitting(false);
+    }
+  };
 
   if (isUiPreview) return <>{children}</>;
 
@@ -85,6 +114,8 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         <label>Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required /></label>
         <button className="button primary auth-submit" disabled={submitting || Boolean(configurationError)}>{submitting ? <LoaderCircle className="spin" size={17} /> : <LogIn size={17} />}{submitting ? "Signing in…" : "Sign in"}</button>
       </form>
+      <div className="auth-divider" aria-hidden="true"><span>or</span></div>
+      <button type="button" className="button secondary auth-google" onClick={() => void signInWithGoogle()} disabled={submitting || Boolean(configurationError)}><Globe2 size={17} aria-hidden="true" />Continue with Google</button>
     </section>
   </main>;
 }

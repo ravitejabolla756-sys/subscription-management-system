@@ -180,10 +180,11 @@ export function createAdminApi(
       },
     });
     let body: ApiEnvelope<T> | null = null;
+    const responseText = await response.text();
     try {
-      body = (await response.json()) as ApiEnvelope<T>;
+      body = JSON.parse(responseText) as ApiEnvelope<T>;
     } catch {
-      /* handled below */
+      throw new ApiClientError(response.status, "INVALID_API_RESPONSE", response.ok ? "The API returned a non-JSON response. Check the configured backend URL." : `Request failed with status ${response.status}`);
     }
     if (!response.ok || !body || body.error)
       throw new ApiClientError(
