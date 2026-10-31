@@ -1,0 +1,33 @@
+"use client";
+
+import Link from "next/link";
+import { ArrowUpRight, CalendarDays, ChevronRight, CreditCard, Download, Sparkles, WalletCards } from "lucide-react";
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { demoInvoices, demoSubscriptions, revenueData } from "./_components/portal-data";
+import { DemoNotice, PageHeading, StatusPill } from "./_components/portal-shell";
+
+function StatCard({ label, value, helper, icon: Icon, tone }: { label: string; value: string; helper: string; icon: typeof WalletCards; tone: string }) {
+  return <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_8px_30px_-24px_rgba(15,23,42,0.25)]"><div className="flex items-start justify-between"><div><p className="text-xs font-medium text-slate-500">{label}</p><p className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">{value}</p></div><span className={`flex h-9 w-9 items-center justify-center rounded-xl ${tone}`}><Icon size={17} /></span></div><p className="mt-4 text-[11px] text-slate-400">{helper}</p></div>;
+}
+
+export default function PortalDashboard() {
+  const active = demoSubscriptions.filter((item) => item.status === "Active");
+  const outstanding = demoInvoices.filter((item) => item.status !== "Paid").reduce((sum, invoice) => sum + invoice.amount, 0);
+  return <>
+    <PageHeading eyebrow="Overview" title="Your subscription overview" description="Keep track of what you use, what you spend, and what’s coming up next." action={<button className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-blue-600/20 transition-colors hover:bg-blue-700"><Download size={15} /> Download statement</button>} />
+    <DemoNotice />
+    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <StatCard label="Active subscriptions" value={String(active.length)} helper="1 plan paused" icon={WalletCards} tone="bg-blue-50 text-blue-600" />
+      <StatCard label="Monthly spend" value="$238.00" helper="Across 2 active plans" icon={CreditCard} tone="bg-violet-50 text-violet-600" />
+      <StatCard label="Outstanding balance" value={`$${outstanding.toFixed(2)}`} helper="1 invoice needs attention" icon={ArrowUpRight} tone="bg-amber-50 text-amber-600" />
+      <StatCard label="Next billing date" value="Dec 04" helper="Analytics Pro · in 11 days" icon={CalendarDays} tone="bg-emerald-50 text-emerald-600" />
+    </section>
+
+    <section className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(300px,0.8fr)]">
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-5 md:p-6"><div className="flex items-start justify-between"><div><h2 className="text-sm font-semibold text-slate-900">Spend over time</h2><p className="mt-1 text-xs text-slate-400">Total invoice value · Last 6 months</p></div><span className="rounded-lg bg-slate-50 px-2.5 py-1.5 text-[11px] font-medium text-slate-500">2025 <ChevronRight size={12} className="ml-1 inline" /></span></div><div className="mt-6 h-[250px] w-full"><ResponsiveContainer width="100%" height="100%"><AreaChart data={revenueData} margin={{ top: 8, right: 4, left: -20, bottom: 0 }}><defs><linearGradient id="portalRevenue" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#3b82f6" stopOpacity={0.22} /><stop offset="100%" stopColor="#3b82f6" stopOpacity={0.01} /></linearGradient></defs><CartesianGrid vertical={false} stroke="#e8edf4" strokeDasharray="4 4" /><XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "#94a3b8" }} dy={10} /><YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "#94a3b8" }} tickFormatter={(value) => `$${value}`} /><Tooltip contentStyle={{ border: "1px solid #e2e8f0", borderRadius: 12, fontSize: 12, boxShadow: "0 8px 24px rgba(15,23,42,.08)" }} formatter={(value) => [`$${value}`, "Spend"]} /><Area type="monotone" dataKey="revenue" stroke="#2563eb" strokeWidth={2.5} fill="url(#portalRevenue)" dot={{ r: 3, fill: "#2563eb", strokeWidth: 2, stroke: "#fff" }} activeDot={{ r: 5 }} /></AreaChart></ResponsiveContainer></div></div>
+      <div className="rounded-2xl border border-slate-200/80 bg-[#0c1b33] p-6 text-white"><div className="flex items-start justify-between"><div><p className="text-xs font-medium text-blue-200">Next renewal</p><h2 className="mt-2 text-lg font-semibold">Analytics Pro</h2></div><Sparkles size={19} className="text-blue-300" /></div><div className="mt-8 border-t border-white/10 pt-5"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/20 text-blue-300"><CalendarDays size={18} /></div><div><p className="text-sm font-medium">December 04, 2025</p><p className="mt-1 text-xs text-slate-400">$89.00 · Growth plan</p></div></div><Link href="/portal/subscriptions/sub-analytics" className="mt-6 flex items-center justify-between rounded-xl bg-white/10 px-3.5 py-3 text-xs font-medium transition-colors hover:bg-white/15">View subscription <ChevronRight size={15} /></Link></div></div>
+    </section>
+
+    <section className="mt-6 rounded-2xl border border-slate-200/80 bg-white"><div className="flex items-center justify-between border-b border-slate-100 px-5 py-5 md:px-6"><div><h2 className="text-sm font-semibold text-slate-900">Active subscriptions</h2><p className="mt-1 text-xs text-slate-400">Plans currently linked to your workspace</p></div><Link href="/portal/subscriptions" className="text-xs font-semibold text-blue-600 hover:text-blue-700">View all <ChevronRight size={13} className="ml-0.5 inline" /></Link></div><div className="divide-y divide-slate-100">{active.map((subscription) => <Link href={`/portal/subscriptions/${subscription.id}`} key={subscription.id} className="flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-slate-50 md:px-6"><div className="flex min-w-0 items-center gap-3"><span className={`h-2.5 w-2.5 shrink-0 rounded-full ${subscription.accent}`} /><div className="min-w-0"><p className="truncate text-sm font-medium text-slate-800">{subscription.name}</p><p className="mt-1 text-xs text-slate-400">{subscription.plan} plan · Renews {subscription.nextBilling}</p></div></div><div className="flex shrink-0 items-center gap-4"><p className="hidden text-sm font-semibold text-slate-800 sm:block">${subscription.price}<span className="text-xs font-normal text-slate-400">/{subscription.cadence}</span></p><StatusPill status={subscription.status} /><ChevronRight size={15} className="text-slate-300" /></div></Link>)}</div></section>
+  </>;
+}
