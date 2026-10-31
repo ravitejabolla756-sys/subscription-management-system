@@ -6,7 +6,7 @@ import { AuthGate, useAdminSession } from "@/components/admin/auth-gate";
 import { createClient } from "@/lib/supabase/client";
 import { isUiPreview } from "@/lib/preview-mode";
 
-const navGroups = [{ label: "Workspace", items: [["Dashboard", "/dashboard", LayoutDashboard], ["Products", "/products", Package], ["Plans", "/plans", SlidersHorizontal], ["Customers", "/customers", Users]] }, { label: "Operations", items: [["Subscriptions", "/subscriptions", WalletCards], ["Invoices", "/invoices", FileText], ["Payments", "/payments", CreditCard]] }] as const;
+const navGroups = [{ label: "Workspace", items: [["Dashboard", "/dashboard", LayoutDashboard], ["Products", "/products", Package], ["Plans", "/plans", SlidersHorizontal], ["Customers", "/customers", Users]] }, { label: "Billing operations", items: [["Subscriptions", "/subscriptions", WalletCards], ["Invoices", "/invoices", FileText], ["Payments", "/payments", CreditCard]] }] as const;
 export function AdminShell({ active, children }: { active: string; children: React.ReactNode }) {
   const [open, setOpen] = useState(true);
   return <AuthGate><AuthenticatedShell active={active} open={open} setOpen={setOpen}>{children}</AuthenticatedShell></AuthGate>;

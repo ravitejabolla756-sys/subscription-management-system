@@ -4,7 +4,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "re
 import { ChevronDown, Filter, LoaderCircle, MoreHorizontal, Package, Pencil, Search, Tag, Users, X } from "lucide-react";
 import { ApiClientError, createAdminApi, type PlanRecord, type ProductRecord } from "@/lib/api";
 import { DemoNotice, PageHeader } from "@/components/admin/admin-shell";
-import styles from "./catalog-view.module.css";
+const styles = new Proxy({} as Record<string, string>, { get: (_, property) => String(property) });
 
 type Product = ProductRecord & { status: "Active" | "Draft"; plans: number };
 type Plan = PlanRecord & { status: "Active" | "Draft"; product: string; subscribers: number; cadence: string };
