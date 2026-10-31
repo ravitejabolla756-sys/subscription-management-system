@@ -1,0 +1,638 @@
+"use client";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  MoreHorizontal,
+  Search,
+  SlidersHorizontal,
+  X,
+} from "lucide-react";
+import {
+  demoCustomers,
+  demoInvoices,
+  demoPayments,
+  demoSubscriptions,
+  type Invoice,
+} from "@/lib/demo-data";
+import { DemoNotice, PageHeader } from "@/components/admin/admin-shell";
+
+type Resource = "customers" | "subscriptions" | "invoices" | "payments";
+const descriptions: Record<Resource, string> = {
+  customers: "Manage customer profiles and account relationships.",
+  subscriptions: "Create, monitor and control recurring subscriptions.",
+  invoices: "Track billing documents and payment status.",
+  payments: "Review payment history and record offline payments.",
+};
+const status = (value: string) => (
+  <span className={`status-badge ${value.toLowerCase()}`}>
+    <span />
+    {value}
+  </span>
+);
+function TableFrame({
+  query,
+  setQuery,
+  filter,
+  setFilter,
+  count,
+  loading,
+  children,
+}: {
+  query: string;
+  setQuery: (value: string) => void;
+  filter: string;
+  setFilter: (value: string) => void;
+  count: number;
+  loading: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <article className="panel table-panel">
+      <div className="table-toolbar">
+        <label className="search-box">
+          <Search size={17} />
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search records"
+            aria-label="Search records"
+          />
+        </label>
+        <label className="filter-button">
+          <SlidersHorizontal size={16} />
+          <select
+            value={filter}
+            onChange={(event) => setFilter(event.target.value)}
+            aria-label="Filter status"
+          >
+            <option>All</option>
+            <option>Active</option>
+            <option>Trialing</option>
+            <option>Paused</option>
+            <option>Paid</option>
+            <option>Pending</option>
+            <option>Overdue</option>
+            <option>Failed</option>
+          </select>
+        </label>
+      </div>
+      {loading ? (
+        <div className="table-skeleton">
+          <span />
+          <span />
+          <span />
+        </div>
+      ) : count ? (
+        <div className="table-scroll">
+          <table>{children}</table>
+        </div>
+      ) : (
+        <div className="table-empty">
+          <div className="empty-icon">⌕</div>
+          <strong>No matching records</strong>
+          <p>Try another search or clear the status filter.</p>
+        </div>
+      )}
+      <div className="table-footer">
+        <span>
+          {count} demo {count === 1 ? "record" : "records"}
+        </span>
+        <div className="pagination">
+          <button disabled aria-label="Previous page">
+            <ChevronLeft size={16} />
+          </button>
+          <button className="current-page">1</button>
+          <button disabled aria-label="Next page">
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
+    </article>
+  );
+}
+function Modal({
+  title,
+  close,
+  submit,
+  children,
+}: {
+  title: string;
+  close: () => void;
+  submit: (event: FormEvent) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="modal-backdrop" onMouseDown={close}>
+      <form
+        className="modal"
+        onSubmit={submit}
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="modal-head">
+          <h2>{title}</h2>
+          <button
+            type="button"
+            className="icon-button"
+            onClick={close}
+            aria-label="Close form"
+          >
+            <X size={19} />
+          </button>
+        </div>
+        {children}
+        <div className="modal-actions">
+          <button type="button" className="button secondary" onClick={close}>
+            Cancel
+          </button>
+          <button type="submit" className="button primary">
+            Save record
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+const Field = ({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) => (
+  <label>
+    {label}
+    {children}
+  </label>
+);
+export default function RecordsView({ resource }: { resource: Resource }) {
+  const loadingStart = useState(true);
+  const loading = loadingStart[0];
+  const setLoading = loadingStart[1];
+  useEffect(() => {
+    const timer = window.setTimeout(() => setLoading(false), 240);
+    return () => window.clearTimeout(timer);
+  }, [setLoading]);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("All");
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [amount, setAmount] = useState("");
+  const [error, setError] = useState("");
+  const [selected, setSelected] = useState<Invoice | null>(null);
+  const [customers, setCustomers] = useState(demoCustomers);
+  const [subscriptions, setSubscriptions] = useState(demoSubscriptions);
+  const [payments, setPayments] = useState(demoPayments);
+  const match = useCallback(
+    (value: string, state?: string) =>
+      value.toLowerCase().includes(query.toLowerCase()) &&
+      (filter === "All" || state === filter),
+    [filter, query],
+  );
+  const visibleCustomers = useMemo(
+    () =>
+      customers.filter((row) =>
+        match(`${row.name} ${row.email} ${row.company}`, row.status),
+      ),
+    [customers, match],
+  );
+  const visibleSubscriptions = useMemo(
+    () =>
+      subscriptions.filter((row) =>
+        match(`${row.id} ${row.customer} ${row.plan}`, row.status),
+      ),
+    [match, subscriptions],
+  );
+  const visibleInvoices = demoInvoices.filter((row) =>
+    match(`${row.id} ${row.customer}`, row.status),
+  );
+  const visiblePayments = payments.filter((row) =>
+    match(`${row.id} ${row.customer} ${row.invoice}`, row.status),
+  );
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    if (resource === "customers") {
+      if (name.trim().length < 3 || !email.includes("@"))
+        return setError("Enter a name and valid email address.");
+      setCustomers([
+        ...customers,
+        {
+          id: `CUS-${customers.length + 1001}`,
+          name: name.trim(),
+          email: email.trim(),
+          company: "New account",
+          subscriptions: 0,
+          joined: "Oct 31, 2026",
+          status: "Invited",
+        },
+      ]);
+    }
+    if (resource === "subscriptions")
+      setSubscriptions([
+        ...subscriptions,
+        {
+          id: `SUB-${2048 + subscriptions.length + 1}`,
+          customerId: "CUS-1001",
+          customer: name || "Olivia Martin",
+          plan: "Growth",
+          amount: "$49.00",
+          nextBilling: "Nov 30, 2026",
+          status: "Active",
+        },
+      ]);
+    if (resource === "payments") {
+      if (!amount || Number(amount) <= 0)
+        return setError("Enter a payment amount greater than zero.");
+      setPayments([
+        {
+          id: `PAY-${8801 + payments.length + 1}`,
+          customer: name || "Olivia Martin",
+          invoice: "Manual record",
+          amount: `$${Number(amount).toFixed(2)}`,
+          date: "Oct 31, 2026",
+          method: "Manual entry",
+          status: "Paid",
+        },
+        ...payments,
+      ]);
+    }
+    setName("");
+    setEmail("");
+    setAmount("");
+    setOpen(false);
+  };
+  const header = (
+    <PageHeader
+      title={resource[0].toUpperCase() + resource.slice(1)}
+      description={descriptions[resource]}
+      action={
+        resource === "customers"
+          ? "Add customer"
+          : resource === "subscriptions"
+            ? "Create subscription"
+            : resource === "payments"
+              ? "Record payment"
+              : "Create invoice"
+      }
+      onAction={() => {
+        setError("");
+        setOpen(true);
+      }}
+    />
+  );
+  if (resource === "customers")
+    return (
+      <>
+        <>{header}</>
+        <DemoNotice>
+          Demo customer data is isolated locally. Creates and edits are ready to
+          map to the customers API.
+        </DemoNotice>
+        <TableFrame
+          {...{
+            query,
+            setQuery,
+            filter,
+            setFilter,
+            loading,
+            count: visibleCustomers.length,
+          }}
+        >
+          <thead>
+            <tr>
+              <th>Customer</th>
+              <th>Company</th>
+              <th>Subscriptions</th>
+              <th>Joined</th>
+              <th>Status</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {visibleCustomers.map((row) => (
+              <tr key={row.id}>
+                <td>
+                  <div className="product-cell">
+                    <span className="avatar blue">
+                      {row.name
+                        .split(" ")
+                        .map((x) => x[0])
+                        .join("")}
+                    </span>
+                    <div>
+                      <strong>{row.name}</strong>
+                      <div className="muted">{row.email}</div>
+                    </div>
+                  </div>
+                </td>
+                <td>{row.company}</td>
+                <td>{row.subscriptions}</td>
+                <td>{row.joined}</td>
+                <td>{status(row.status)}</td>
+                <td>
+                  <button className="row-action">Edit</button>
+                  <button
+                    className="icon-button"
+                    aria-label="More customer actions"
+                  >
+                    <MoreHorizontal size={17} />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </TableFrame>
+        {open && (
+          <Modal
+            title="Add customer"
+            close={() => setOpen(false)}
+            submit={submit}
+          >
+            <Field label="Full name">
+              <input
+                autoFocus
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Alex Morgan"
+              />
+            </Field>
+            <Field label="Email address">
+              <input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="alex@company.com"
+                type="email"
+              />
+            </Field>
+            {error && <span className="form-error">{error}</span>}
+          </Modal>
+        )}
+      </>
+    );
+  if (resource === "subscriptions")
+    return (
+      <>
+        <>{header}</>
+        <DemoNotice>
+          Subscription forms are local demo interactions. Billing lifecycle
+          events will connect to Member 2&apos;s API.
+        </DemoNotice>
+        <TableFrame
+          {...{
+            query,
+            setQuery,
+            filter,
+            setFilter,
+            loading,
+            count: visibleSubscriptions.length,
+          }}
+        >
+          <thead>
+            <tr>
+              <th>Subscription</th>
+              <th>Customer</th>
+              <th>Plan</th>
+              <th>Next billing</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visibleSubscriptions.map((row) => (
+              <tr key={row.id}>
+                <td>
+                  <strong>{row.id}</strong>
+                  <div className="muted">{row.amount} / month</div>
+                </td>
+                <td>{row.customer}</td>
+                <td>{row.plan}</td>
+                <td>{row.nextBilling}</td>
+                <td>{status(row.status)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </TableFrame>
+        {open && (
+          <Modal
+            title="Create subscription"
+            close={() => setOpen(false)}
+            submit={submit}
+          >
+            <Field label="Customer">
+              <select value={name} onChange={(e) => setName(e.target.value)}>
+                <option>Olivia Martin</option>
+                <option>Noah Williams</option>
+                <option>Emma Thompson</option>
+              </select>
+            </Field>
+            <Field label="Plan">
+              <select>
+                <option>Growth</option>
+                <option>Starter</option>
+                <option>Scale</option>
+              </select>
+            </Field>
+            <Field label="Lifecycle status">
+              <select>
+                <option>Active</option>
+                <option>Trialing</option>
+                <option>Paused</option>
+              </select>
+            </Field>
+          </Modal>
+        )}
+      </>
+    );
+  if (resource === "invoices")
+    return (
+      <>
+        <>{header}</>
+        <div className="summary-strip">
+          <div>
+            <span>Total invoiced</span>
+            <strong>$276.00</strong>
+          </div>
+          <div>
+            <span>Paid</span>
+            <strong>$78.00</strong>
+          </div>
+          <div>
+            <span>Outstanding</span>
+            <strong>$198.00</strong>
+          </div>
+          <div>
+            <span>Overdue</span>
+            <strong>$149.00</strong>
+          </div>
+        </div>
+        <TableFrame
+          {...{
+            query,
+            setQuery,
+            filter,
+            setFilter,
+            loading,
+            count: visibleInvoices.length,
+          }}
+        >
+          <thead>
+            <tr>
+              <th>Invoice</th>
+              <th>Customer</th>
+              <th>Issued</th>
+              <th>Due</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {visibleInvoices.map((row) => (
+              <tr key={row.id}>
+                <td>
+                  <button
+                    className="link-button"
+                    onClick={() => setSelected(row)}
+                  >
+                    {row.id}
+                  </button>
+                </td>
+                <td>{row.customer}</td>
+                <td>{row.issued}</td>
+                <td>{row.due}</td>
+                <td>
+                  <strong>{row.amount}</strong>
+                </td>
+                <td>{status(row.status)}</td>
+                <td>
+                  <button
+                    className="row-action"
+                    onClick={() => setSelected(row)}
+                  >
+                    View
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </TableFrame>
+        {selected && (
+          <div className="modal-backdrop" onMouseDown={() => setSelected(null)}>
+            <article
+              className="modal invoice-detail"
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <div className="modal-head">
+                <div>
+                  <span className="muted">Invoice detail</span>
+                  <h2>{selected.id}</h2>
+                </div>
+                <button
+                  className="icon-button"
+                  onClick={() => setSelected(null)}
+                  aria-label="Close invoice detail"
+                >
+                  <X size={19} />
+                </button>
+              </div>
+              <div className="invoice-total">
+                <span>Amount due</span>
+                <strong>{selected.amount}</strong>
+                {status(selected.status)}
+              </div>
+              <div className="detail-grid">
+                <span>
+                  Customer<strong>{selected.customer}</strong>
+                </span>
+                <span>
+                  Issued<strong>{selected.issued}</strong>
+                </span>
+                <span>
+                  Due date<strong>{selected.due}</strong>
+                </span>
+                <span>
+                  Subscription<strong>{selected.subscription}</strong>
+                </span>
+              </div>
+              <button
+                className="button secondary"
+                onClick={() => setSelected(null)}
+              >
+                Close detail
+              </button>
+            </article>
+          </div>
+        )}
+      </>
+    );
+  return (
+    <>
+      <>{header}</>
+      <TableFrame
+        {...{
+          query,
+          setQuery,
+          filter,
+          setFilter,
+          loading,
+          count: visiblePayments.length,
+        }}
+      >
+        <thead>
+          <tr>
+            <th>Payment</th>
+            <th>Customer</th>
+            <th>Invoice</th>
+            <th>Date</th>
+            <th>Method</th>
+            <th>Amount</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {visiblePayments.map((row) => (
+            <tr key={row.id}>
+              <td>
+                <strong>{row.id}</strong>
+              </td>
+              <td>{row.customer}</td>
+              <td>{row.invoice}</td>
+              <td>{row.date}</td>
+              <td>{row.method}</td>
+              <td>
+                <strong>{row.amount}</strong>
+              </td>
+              <td>{status(row.status)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </TableFrame>
+      {open && (
+        <Modal
+          title="Record payment"
+          close={() => setOpen(false)}
+          submit={submit}
+        >
+          <Field label="Customer">
+            <select value={name} onChange={(e) => setName(e.target.value)}>
+              <option>Olivia Martin</option>
+              <option>Noah Williams</option>
+            </select>
+          </Field>
+          <Field label="Amount">
+            <input
+              autoFocus
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="0.00"
+              type="number"
+              min="0.01"
+              step="0.01"
+            />
+          </Field>
+          {error && <span className="form-error">{error}</span>}
+        </Modal>
+      )}
+    </>
+  );
+}
