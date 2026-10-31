@@ -74,3 +74,21 @@ semantics match `docs/api-contract.md`.
    and test a fresh subscription without any discount rule.
 
 The above checks are a test **plan**, not claims that live SQL has passed.
+
+## Verification status
+
+- Static migration/API review: PASS; no unqualified security-definer object
+  references or authorization bypasses were found.
+- `npm run lint`: PASS.
+- `npx tsc --noEmit`: PASS.
+- `npm run build`: PASS.
+- `npm audit --omit=dev`: PASS; 0 production vulnerabilities reported.
+- Staging SQL runtime: NOT RUN; no staging project credentials were supplied.
+- Production SQL/runtime: NOT RUN by design.
+
+The staging-only runner is `scripts/run-discount-staging-test.ps1`. It requires
+`.env.staging.local`, a separate Supabase project, and an explicit `RUN`
+confirmation. Start the Next.js server against the same staging variables on a
+separate local port, then run the wrapper. It covers percentage, fixed amount,
+minimum spend/quantity, product scope, expiry/inactive rules, redemption caps,
+tax-after-discount, duplicate billing, concurrent billing, and role access.
