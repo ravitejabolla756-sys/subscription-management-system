@@ -9,7 +9,6 @@ import type {
   DashboardRecord,
   InvoiceRecord,
   PaymentRecord,
-  PaymentResponse,
   PlanRecord,
   ProductRecord,
   SubscriptionRecord,
@@ -81,7 +80,7 @@ export function createPreviewApi(): AdminApi {
     updateSubscription: async (subscriptionId, input) => { subscriptions = subscriptions.map((record) => record.id === subscriptionId ? { ...record, ...input } : record); return copy(enrichSubscriptions().find((record) => record.id === subscriptionId)!); },
     listInvoices: async () => copy(invoices),
     listPayments: async () => copy(payments),
-    createPayment: async (input: CreatePaymentInput): Promise<PaymentResponse> => { const payment: PaymentRecord = { ...input, id: id("payment"), paid_at: input.paid_at ?? date(), reference: input.reference || null, notes: input.notes || null }; payments = [payment, ...payments]; const invoice = invoices.find((item) => item.id === input.invoice_id); if (!invoice) throw new Error("Choose a valid sample invoice."); const paid = Math.min(Number(invoice.total_amount), Number(invoice.paid_amount) + Number(input.amount)); const due = Math.max(0, Number(invoice.total_amount) - paid); invoice.paid_amount = paid.toFixed(2); invoice.due_amount = due.toFixed(2); invoice.status = due === 0 ? "paid" : paid > 0 ? "partially_paid" : invoice.status; return { payment: copy(payment), invoice: copy({ id: invoice.id, status: invoice.status, total_amount: invoice.total_amount, paid_amount: invoice.paid_amount, due_amount: invoice.due_amount }) }; },
+    createPayment: async (input: CreatePaymentInput): Promise<PaymentRecord> => { const invoice = invoices.find((item) => item.id === input.invoice_id); if (!invoice) throw new Error("Choose a valid sample invoice."); const payment: PaymentRecord = { ...input, id: id("payment"), paid_at: input.paid_at ?? date(), reference: input.reference || null, notes: input.notes || null }; payments = [payment, ...payments]; const paid = Math.min(Number(invoice.total_amount), Number(invoice.paid_amount) + Number(input.amount)); const due = Math.max(0, Number(invoice.total_amount) - paid); invoice.paid_amount = paid.toFixed(2); invoice.due_amount = due.toFixed(2); invoice.status = due === 0 ? "paid" : paid > 0 ? "partially_paid" : invoice.status; return copy(payment); },
     dashboard: async () => copy(dashboard()),
   };
 }

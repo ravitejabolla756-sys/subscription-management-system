@@ -87,10 +87,6 @@ export type PaymentRecord = {
   reference: string | null;
   notes: string | null;
 };
-export type PaymentResponse = {
-  payment: PaymentRecord;
-  invoice: Pick<InvoiceRecord, "id" | "status" | "total_amount" | "paid_amount" | "due_amount">;
-};
 export type DashboardRecord = {
   active_subscriptions: number;
   revenue_collected: string;
@@ -154,7 +150,7 @@ export type AdminApi = {
   ): Promise<SubscriptionRecord>;
   listInvoices(query?: URLSearchParams): Promise<InvoiceRecord[]>;
   listPayments(): Promise<PaymentRecord[]>;
-  createPayment(input: CreatePaymentInput): Promise<PaymentResponse>;
+  createPayment(input: CreatePaymentInput): Promise<PaymentRecord>;
   dashboard(query?: URLSearchParams): Promise<DashboardRecord>;
 };
 
